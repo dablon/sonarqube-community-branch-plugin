@@ -18,65 +18,88 @@
  */
 package com.github.mc1arke.sonarqube.plugin.scanner;
 
+import com.github.mc1arke.sonarqube.plugin.ce.pullrequest.gitlab.GitlabMergeRequestDecorator;
 import org.junit.jupiter.api.Test;
-import org.sonar.api.batch.fs.internal.DefaultInputFile;
-import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
-import org.sonar.api.batch.sensor.internal.SensorContextTester;
+import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.utils.System2;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Map;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * SonarQube 26.10 elimino los fixtures de test del batch filesystem
+ * ({@code org.sonar.api.batch.fs.internal.TestInputFileBuilder} y
+ * {@code DefaultInputFile} ya no existen en la distribucion), asi que este test se apoya
+ * en un {@link SensorContext} mockeado. El sensor solo publica propiedades de contexto,
+ * de modo que no hace falta tocar el filesystem para comprobarlo, y asi se cubren
+ * tambien las propiedades de sistema, que antes no se verificaban.
+ */
 class ScannerPullRequestPropertySensorTest {
 
     private final System2 system2 = mock();
+    private final SensorContext sensorContext = mock();
     private final ScannerPullRequestPropertySensor sensor = new ScannerPullRequestPropertySensor(system2);
 
     @Test
-    void testPropertySensorWithGitlabCIEnvValues() throws IOException {
-        
-        Path temp = Files.createTempDirectory("sensor");
-
-        DefaultInputFile inputFile = new TestInputFileBuilder("foo", "src/Foo.xoo").initMetadata("a\nb\nc\nd\ne\nf\ng\nh\ni\n").build();
-        SensorContextTester context = SensorContextTester.create(temp);
-        context.fileSystem().add(inputFile);        
-
+    void shouldPublishBothGitlabPropertiesFromEnvironmentVariables() {
         when(system2.envVariable("GITLAB_CI")).thenReturn("true");
-        when(system2.envVariable("CI_API_V4_URL")).thenReturn("value");
-        when(system2.envVariable("CI_PROJECT_PATH")).thenReturn("value");
-        when(system2.envVariable("CI_MERGE_REQUEST_PROJECT_URL")).thenReturn("value");
-        when(system2.envVariable("CI_PIPELINE_ID")).thenReturn("value");        
+        when(system2.envVariable("CI_MERGE_REQUEST_PROJECT_URL")).thenReturn("https://gitlab.example.com/proj");
+        when(system2.envVariable("CI_PIPELINE_ID")).thenReturn("12345");
 
-        sensor.execute(context);
+        sensor.execute(sensorContext);
 
-        Map<String, String> properties = context.getContextProperties();
-
-        assertThat(properties).hasSize(2);
-    }    
+        assertThat(capturedKeys()).containsExactlyInAnyOrder(
+                GitlabMergeRequestDecorator.PULLREQUEST_GITLAB_PROJECT_URL,
+                GitlabMergeRequestDecorator.PULLREQUEST_GITLAB_PIPELINE_ID);
+    }
 
     @Test
-    void testPropertySensorWithGitlabEnvValues() throws IOException {
-        
-        Path temp = Files.createTempDirectory("sensor");
-
-        DefaultInputFile inputFile = new TestInputFileBuilder("foo", "src/Foo.xoo").initMetadata("a\nb\nc\nd\ne\nf\ng\nh\ni\n").build();
-        SensorContextTester context = SensorContextTester.create(temp);
-        context.fileSystem().add(inputFile);        
-
+    void shouldPublishOnlyThePropertiesPresentInTheEnvironment() {
         when(system2.envVariable("GITLAB_CI")).thenReturn("true");
-        when(system2.envVariable("CI_MERGE_REQUEST_PROJECT_URL")).thenReturn("value");
-        when(system2.envVariable("CI_PIPELINE_ID")).thenReturn("value");
+        when(system2.envVariable("CI_MERGE_REQUEST_PROJECT_URL")).thenReturn("https://gitlab.example.com/proj");
 
-        sensor.execute(context);
+        sensor.execute(sensorContext);
 
-        Map<String, String> properties = context.getContextProperties();
-
-        assertThat(properties).hasSize(2);
+        assertThat(capturedKeys()).containsExactly(
+                GitlabMergeRequestDecorator.PULLREQUEST_GITLAB_PROJECT_URL);
     }
+
+    @Test
+    void shouldPublishNothingOutsideGitlabCi() {
+        when(system2.envVariable("GITLAB_CI")).thenReturn("false");
+        when(system2.envVariable("CI_MERGE_REQUEST_PROJECT_URL")).thenReturn("https://gitlab.example.com/proj");
+        when(system2.envVariable("CI_PIPELINE_ID")).thenReturn("12345");
+
+        sensor.execute(sensorContext);
+
+        assertThat(capturedKeys()).isEmpty();
+    }
+
+    @Test
+    void shouldPublishPropertiesFromSystemProperties() {
+        when(system2.envVariable("GITLAB_CI")).thenReturn("false");
+        when(system2.property(GitlabMergeRequestDecorator.PULLREQUEST_GITLAB_PROJECT_URL))
+                .thenReturn("https://gitlab.example.com/proj");
+        when(system2.property(GitlabMergeRequestDecorator.PULLREQUEST_GITLAB_PIPELINE_ID)).thenReturn("999");
+
+        sensor.execute(sensorContext);
+
+        assertThat(capturedKeys()).containsExactlyInAnyOrder(
+                GitlabMergeRequestDecorator.PULLREQUEST_GITLAB_PROJECT_URL,
+                GitlabMergeRequestDecorator.PULLREQUEST_GITLAB_PIPELINE_ID);
+    }
+
+    private List<String> capturedKeys() {
+        org.mockito.ArgumentCaptor<String> captor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(sensorContext, org.mockito.Mockito.atLeast(0))
+                .addContextProperty(captor.capture(), anyString());
+        return captor.getAllValues();
+    }
+
 }
