@@ -23,3 +23,8 @@
 #VSCode
 .project
 .history
+
+# jar local de validacion (lo produce gradle build -x test)
+local-test/jars/
+sonarqube-lib/
+

@@ -1,0 +1,14 @@
+ARG SQ_VERSION=26.10.0.133078-community
+FROM sonarqube:${SQ_VERSION}
+
+# Plugin jar compilado localmente (local-test/jars) contra SonarQube 26.10.
+# Va en local-test/jars y no en build/libs porque el .dockerignore del repo
+# excluye /build/.
+COPY local-test/jars/sonarqube-community-branch-plugin-*.jar /opt/sonarqube/extensions/plugins/
+
+# El plugin SOLO se activa con el javaagent en web y ce. Sin esto el jar esta
+# instalado pero inerte: es el mismo motivo por el que el StatefulSet de
+# Tafitech lleva SONAR_WEB_JAVAOPTS / SONAR_CE_JAVAOPTS.
+ENV PLUGIN_VERSION=26.10.0-SNAPSHOT
+ENV SONAR_WEB_JAVAADDITIONALOPTS="-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-${PLUGIN_VERSION}.jar=web"
+ENV SONAR_CE_JAVAADDITIONALOPTS="-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-${PLUGIN_VERSION}.jar=ce"
