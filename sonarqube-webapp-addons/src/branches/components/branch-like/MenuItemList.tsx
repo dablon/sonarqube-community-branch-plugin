@@ -24,7 +24,7 @@ import { HelperHintIcon, ItemDivider, ItemHeader } from '~design-system';
 import { isDefined } from '~shared/helpers/types';
 import { getBranchLikeKey, isSameBranchLike } from '~sq-server-commons/helpers/branch-like';
 import { translate } from '~sq-server-commons/helpers/l10n';
-import HelpTooltip from '~sq-server-commons/sonar-aligned/components/controls/HelpTooltip';
+import HelpTooltip from '../../../components/HelpTooltip';
 import { BranchLike, BranchLikeTree } from '~sq-server-commons/types/branch-like';
 import MenuItem from './MenuItem';
 

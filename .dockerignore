@@ -7,3 +7,22 @@
 # JavaScript
 node_modules/
 /sonarqube-webapp/libs/sq-server-addons
+
+**/node_modules
+**/.nx
+**/.yarn/cache
+**/dist
+.gradle
+**/.gradle
+build
+**/build
+!gradle/wrapper/**
+sonarqube-lib
+sonarqube-webapp/webapp
+sonarqube-webapp/apps/**/build
+sonarqube-webapp/private
+.git
+**/.git
+local-test
+*.zip
+sonarqube-community-branch-plugin-*.jar
