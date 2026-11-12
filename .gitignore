@@ -28,3 +28,6 @@
 local-test/jars/
 sonarqube-lib/
 
+
+# Respaldo del webapp 26.10 (fuera del worktree, no versionar)
+_backups/

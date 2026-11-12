@@ -52,3 +52,14 @@ until reconciled).
 9. POST `/api/system/migrate_db`, poll until `UP`.
 10. Verify: `/api/system/health` GREEN, `/api/project_branches/list` (plugin works),
     SAML settings intact, Entra login works.
+
+## Imagen de runtime (v5+) y mecanismo del plugin jar
+
+- docker/Dockerfile.cbp-web = imagen de runtime (FROM sonarqube:<ver>-community + webapp + jar en
+  /opt/cbp/). Se construye con contexto en sonarqube-webapp/:
+  docker build -f ../../docker/Dockerfile.cbp-web -t nicoalca/sonarqube-cbp:<ver>-vN .
+  (copia webapp/ y el jar al contexto antes de construir).
+- docker/install_plugins.sh = script del initContainer install-plugins (copia el jar de
+  /opt/cbp/ al volumen xtensions/plugins). NO volver a curl desde GitHub: el cluster no lo
+  necesita y asi el arranque es reproducible sin red.
+- Dockerfile (raiz) = build completo (gradle jar + yarn webapp) -> imagen cbp-build.

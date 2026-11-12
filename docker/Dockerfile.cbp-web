@@ -1,0 +1,17 @@
+# Imagen SonarQube Community 26.11.0.134175 con la UI del Community Branch Plugin
+# Reemplaza SOLO el bundle web por el compilado con sonarqube-webapp-addons.
+# El JAR del plugin y los -javaagent los sigue poniendo el StatefulSet/secret.
+
+FROM sonarqube:26.11.0.134175-community
+
+USER root
+RUN chmod -R 770 /opt/sonarqube/web && rm -rf /opt/sonarqube/web/*
+COPY --chown=sonarqube:root webapp /opt/sonarqube/web
+RUN chmod -R 550 /opt/sonarqube/web
+
+# Plugin jar horneado (el initContainer no puede descargarlo: sin salida a GitHub desde el cluster)
+COPY --chown=sonarqube:root sonarqube-community-branch-plugin-26.11.0.jar /opt/sonarqube/extensions/plugins/
+# Segunda copia en ruta NO montada: el emptyDir de extensions oculta plugins/ en runtime;
+# el initContainer install-plugins copia desde aqui al volumen.
+COPY --chown=sonarqube:root sonarqube-community-branch-plugin-26.11.0.jar /opt/cbp/
+USER sonarqube

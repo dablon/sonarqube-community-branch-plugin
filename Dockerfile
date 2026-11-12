@@ -16,6 +16,13 @@ COPY ./sonarqube-webapp ${WORKDIR}
 COPY ./sonarqube-webapp-addons ${WORKDIR}/libs/sq-server-addons
 
 WORKDIR ${WORKDIR}
+
+# El repo oficial de SonarSource trae la carpeta 'private/' (edicion privada), asi que
+# sin EDITION=public el alias '~sq-server-addons' apunta a private/libs/... (inexistente),
+# 'addons' queda undefined y revienta el frontend (useEntitlementCheckQuery,
+# usePurchasableFeature) -> la UI de administracion no carga.
+ENV EDITION=public
+
 RUN yarn install
 RUN yarn nx run sq-server:build
 

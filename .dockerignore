@@ -26,3 +26,7 @@ sonarqube-webapp/private
 local-test
 *.zip
 sonarqube-community-branch-plugin-*.jar
+
+# Respaldo del webapp 26.10: si queda dentro del worktree trae su propio package.json y colisiona con el proyecto nx 'sq-server'.
+sonarqube-webapp/webapp-bak-*
+**/webapp-bak-*
